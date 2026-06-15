@@ -1,0 +1,120 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+  outline: none;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ───────────────────────────────────────────
+   THEME: DARK (default)
+─────────────────────────────────────────── */
+:root,
+:root[data-theme="dark"] {
+  --bg-primary:   #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-elevated:  #1e2a45;
+  --bg-panel:     #16213e;
+  --bg-hover:     #2a2a4e;
+  --bg-btn:       #22223a;
+  --bg-btn-hover: #3a3a5e;
+
+  --text-primary:   #d1d4dc;
+  --text-secondary: #8b8b9e;
+  --text-muted:     #565670;
+
+  --border:       #2a2a4e;
+  --border-focus: #9B7DFF;
+
+  --accent:       #9B7DFF;
+  --accent-hover: #b09dff;
+
+  --up-color:   #26a69a;
+  --down-color: #ef5350;
+
+  /* Lightweight Charts */
+  --chart-bg:          #1a1a2e;
+  --chart-text:        #d1d4dc;
+  --chart-grid:        #2a2a4e;
+  --chart-border:      #2a2a4e;
+  --chart-crosshair:   #9B7DFF;
+}
+
+/* ───────────────────────────────────────────
+   THEME: LIGHT
+─────────────────────────────────────────── */
+:root[data-theme="light"] {
+  --bg-primary:   #f4f5f7;
+  --bg-secondary: #ffffff;
+  --bg-elevated:  #ffffff;
+  --bg-panel:     #ffffff;
+  --bg-hover:     #eef0f4;
+  --bg-btn:       #eef0f4;
+  --bg-btn-hover: #e1e4ea;
+
+  --text-primary:   #1e2026;
+  --text-secondary: #555869;
+  --text-muted:     #969ab3;
+
+  --border:       #e2e4e9;
+  --border-focus: #6930C3;
+
+  --accent:       #6930C3;
+  --accent-hover: #7940d4;
+
+  --up-color:   #089981;
+  --down-color: #f23645;
+
+  /* Lightweight Charts */
+  --chart-bg:          #ffffff;
+  --chart-text:        #1e2026;
+  --chart-grid:        #e2e4e9;
+  --chart-border:      #e2e4e9;
+  --chart-crosshair:   #6930C3;
+}
+
+/* ───────────────────────────────────────────
+   SCROLLBAR
+─────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ───────────────────────────────────────────
+   TRANSITIONS
+─────────────────────────────────────────── */
+.slide-panel-enter-active,
+.slide-panel-leave-active {
+  transition: width 0.22s ease, opacity 0.22s ease;
+  overflow: hidden;
+}
+.slide-panel-enter-from,
+.slide-panel-leave-to {
+  width: 0 !important;
+  opacity: 0;
+}
