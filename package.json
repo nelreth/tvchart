@@ -10,7 +10,9 @@
   "dependencies": {
     "vue": "^3.5.0",
     "pinia": "^2.2.0",
-    "lightweight-charts": "^5.2.0"
+    "lightweight-charts": "^5.2.0",
+    "lightweight-charts-line-tools-core": "file:./packages/lightweight-charts-line-tools-core",
+    "lightweight-charts-line-tools-lines": "file:./packages/lightweight-charts-line-tools-lines"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

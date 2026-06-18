@@ -7,6 +7,8 @@ export const useAppStore = defineStore('app', {
     activePanel: null,          // 'watchlist' | 'scanners' | 'fundamentals' | null
     isContextPanelOpen: false,
     screenshotTrigger: 0,       // inkrementowany aby wywołać screenshot w ChartView
+    lineToolTrigger: 0,         // inkrementowany aby wywołać tryb rysowania w ChartView
+    pendingLineToolType: null,  // np. 'TrendLine'
     drawingMode: false,           // tryb rysowania linii na wykresie
   }),
 
@@ -47,6 +49,11 @@ export const useAppStore = defineStore('app', {
 
     requestScreenshot() {
       this.screenshotTrigger++
+    },
+
+    requestLineTool(toolType = 'TrendLine') {
+      this.pendingLineToolType = toolType
+      this.lineToolTrigger++
     },
 
     toggleDrawingMode() {

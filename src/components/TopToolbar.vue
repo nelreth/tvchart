@@ -83,6 +83,11 @@
           </template>
         </div>
       </div>
+      <button
+        class="toolbar-btn draw-btn"
+        title="Rysuj linię trendu"
+        @click="appStore.requestLineTool('TrendLine')"
+      >╱</button>
     </div>
 
     <!-- ── PRAWA STRONA: akcje ── -->
@@ -365,6 +370,10 @@ async function confirmCreate() {
   font-size: 17px !important;
   color: var(--accent) !important;
   font-weight: 400 !important;
+}
+.draw-btn {
+  margin-left: 60px; /* ok. 2 szerokości standardowego przycisku (2 x 30px) */
+  font-size: 16px;
 }
 .named-menu {
   position: absolute;

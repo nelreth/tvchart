@@ -11,9 +11,11 @@
 
     <template v-else>
       <!-- ── Kategorie kolorów ── -->
-      <section v-if="colorLists.length" class="wl-section">
+      <!-- <section v-if="colorLists.length" class="wl-section"> -->
+      <section v-if="nonEmptyColorLists.length" class="wl-section">
         <div class="wl-section-hdr">Kategorie kolorów</div>
-        <div v-for="wl in colorLists" :key="wl.id" class="wl-group">
+        <!-- <div v-for="wl in colorLists" :key="wl.id" class="wl-group"> -->
+        <div v-for="wl in nonEmptyColorLists" :key="wl.id" class="wl-group">
           <div class="wl-grp-hdr" @click="toggleCollapse(wl.id)">
             <span class="wl-chevron">{{ collapsed.has(wl.id) ? '▸' : '▾' }}</span>
             <span class="wl-grp-dot" :style="{ background: colorHex(wl) }" />
@@ -37,7 +39,7 @@
                 @click.stop="store.removeFrom(wl.id, item.ticker)"
               >×</button>
             </div>
-            <span v-if="!(store.items[wl.id] || []).length" class="wl-empty-row">—</span>
+            <!-- <span v-if="!(store.items[wl.id] || []).length" class="wl-empty-row">—</span> -->
           </div>
         </div>
       </section>
@@ -53,6 +55,11 @@
             <span class="wl-chevron">{{ collapsed.has(wl.id) ? '▸' : '▾' }}</span>
             <span class="wl-grp-name">{{ wl.name }}</span>
             <span class="wl-grp-cnt">{{ (store.items[wl.id] || []).length }}</span>
+            <button
+              class="wl-del"
+              title="Usuń listę"
+              @click.stop="deleteNamedList(wl)"
+            >🗑</button>
           </div>
           <div v-if="!collapsed.has(wl.id)" class="wl-items">
             <div
@@ -95,6 +102,9 @@ const marketStore = useMarketStore()
 
 const colorLists = computed(() => store.colorLists)
 const namedLists = computed(() => store.namedLists)
+const nonEmptyColorLists = computed(() =>
+  colorLists.value.filter(wl => (store.items[wl.id] || []).length > 0)
+)
 
 const collapsed = ref(new Set())
 function toggleCollapse(id) {
@@ -119,6 +129,15 @@ function colorLabel(wl) {
 function tickerColorHex(ticker) {
   const cid = store.activeColorId(ticker)
   return cid ? (store.colorById(cid)?.hex_code ?? null) : null
+}
+
+async function deleteNamedList(wl) {
+  const count = (store.items[wl.id] || []).length
+  if (count > 0) {
+    const ok = window.confirm(`Lista „${wl.name}" zawiera ${count} ticker${count === 1 ? '' : 'y'}. Na pewno usunąć?`)
+    if (!ok) return
+  }
+  await store.deleteNamed(wl.id)
 }
 </script>
 
@@ -231,6 +250,8 @@ function tickerColorHex(ticker) {
 .wl-color-dot-none { visibility: hidden; }
 
 .wl-ticker {
+  flex: 1;
+  text-align: left;
   font-size: 12px;
   font-weight: 500;
   color: var(--text-secondary);
@@ -262,6 +283,25 @@ function tickerColorHex(ticker) {
 }
 .wl-rm:hover {
   background: var(--bg-hover);
+  color: #ef5350;
+}
+
+.wl-grp-hdr:hover .wl-del { opacity: 1; }
+
+.wl-del {
+  opacity: 0;
+  font-size: 11px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--text-muted);
+  background: transparent;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+.wl-del:hover {
+  background: #ef535022;
   color: #ef5350;
 }
 

@@ -33,6 +33,11 @@
             class="sc-status"
             :class="`sc-status-${sc.last_status}`"
           >{{ sc.last_status }}</span>
+          <button
+            class="sc-delete-btn"
+            title="Usuń skaner"
+            @click.stop="confirmDelete(sc.id)"
+          >✕</button>
         </div>
 
         <!-- Wyniki (po rozwinięciu) -->
@@ -87,23 +92,41 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useScannerStore } from '@/stores/scannerStore.js'
 import { useMarketStore }  from '@/stores/marketStore.js'
 
 const store       = useScannerStore()
 const marketStore = useMarketStore()
+const deletingId  = ref(null)
 
 onMounted(() => store.init())
 
 // Wykryj kolumny wartości (wszystko poza polami systemowymi i ticker/rank)
-const EXCLUDE_COLS = new Set(['ticker', 'rank', 'id', 'run_id', 'scanner_id', 'run_timestamp', 'added_at'])
+const EXCLUDE_COLS = new Set(['ticker', 'rank', 'id', 'run_id', 'scanner_id', 'run_timestamp', 'added_at', 'matched_criteria'])
 
 const valueColumns = computed(() => {
   const rows = store.activeResults
   if (!rows?.length) return []
   return Object.keys(rows[0]).filter(k => !EXCLUDE_COLS.has(k))
 })
+
+function confirmDelete(scannerId) {
+  const scanner = store.scanners.find(s => s.id === scannerId)
+  if (!scanner) return
+  if (confirm(`Czy na pewno chcesz usunąć skaner "${scanner.name}"?`)) {
+    handleDelete(scannerId)
+  }
+}
+
+async function handleDelete(scannerId) {
+  deletingId.value = scannerId
+  try {
+    await store.deleteScanner(scannerId)
+  } finally {
+    deletingId.value = null
+  }
+}
 
 function formatDate(ts) {
   if (!ts) return ''
@@ -210,6 +233,28 @@ function formatVal(v) {
 .sc-status-completed { background: #1a3a2a; color: #2ecc71; }
 .sc-status-failed    { background: #3a1a1a; color: #ef5350; }
 .sc-status-pending   { background: #2a2a1a; color: #f1c40f; }
+
+/* Przycisk usuwania */
+.sc-delete-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  transition: background 0.1s, color 0.1s;
+}
+.sc-delete-btn:hover {
+  background: rgba(239, 83, 80, 0.15);
+  color: #ef5350;
+}
 
 /* Sekcja wyników */
 .sc-results {

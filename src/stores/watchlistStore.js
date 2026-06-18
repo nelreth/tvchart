@@ -6,6 +6,7 @@ import {
   addWatchlistItem,
   removeWatchlistItem,
   createWatchlist,
+  deleteWatchlist,
 } from '@/core/api.js'
 import { useUiFeedbackStore } from '@/stores/uiFeedbackStore.js'
 
@@ -127,6 +128,12 @@ export const useWatchlistStore = defineStore('watchlist', {
       } catch (e) {
         useUiFeedbackStore().notify('error', `Nie udało się dodać ${ticker} do listy`)
       }
+    },
+
+    async deleteNamed(wid) {
+      await deleteWatchlist(wid)
+      this.watchlists = this.watchlists.filter(w => w.id !== wid)
+      delete this.items[wid]
     },
 
     async removeFrom(wid, ticker) {

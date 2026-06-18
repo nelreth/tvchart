@@ -56,12 +56,26 @@ export async function createWatchlist(payload) {
   return res.json()
 }
 
+export async function deleteWatchlist(watchlistId) {
+  const res = await fetch(`${API_BASE}/watchlists/${watchlistId}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+}
+
 export async function fetchScanners() {
   return request('/scanners')
 }
 
 export async function fetchScannerResults(scannerId, limit = 200) {
   return request(`/scanners/${scannerId}/results?limit=${limit}`)
+}
+
+export async function deleteScanner(scannerId) {
+  const res = await fetch(`${API_BASE}/scanners/${scannerId}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
 }
 
 export async function fetchFundamentals(ticker) {

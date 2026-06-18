@@ -1,5 +1,6 @@
 <template>
-  <aside class="context-panel" @keydown.esc="appStore.closePanel()">
+  <aside class="context-panel" :style="{ width: panelWidth + 'px' }" @keydown.esc="appStore.closePanel()">
+    <div class="panel-resize-handle" @mousedown.prevent="startResize" />
     <div class="panel-header">
       <span class="panel-title">{{ panelTitle }}</span>
       <button class="panel-close" @click="appStore.closePanel()" title="Zamknij panel">✕</button>
@@ -15,17 +16,39 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useAppStore }      from '@/stores/appStore.js'
 import WatchlistPanel      from '@/components/WatchlistPanel.vue'
+import SearchPanel         from '@/components/SearchPanel.vue'
 import ScannersPanel       from '@/components/ScannersPanel.vue'
 import FundamentalsPanel   from '@/components/FundamentalsPanel.vue'
 
 const appStore = useAppStore()
 
+const panelWidth = ref(300)
+
+function startResize(e) {
+  const startX = e.clientX
+  const startWidth = panelWidth.value
+
+  function onMouseMove(ev) {
+    const delta = startX - ev.clientX
+    panelWidth.value = Math.max(180, Math.min(700, startWidth + delta))
+  }
+
+  function onMouseUp() {
+    document.removeEventListener('mousemove', onMouseMove)
+    document.removeEventListener('mouseup', onMouseUp)
+  }
+
+  document.addEventListener('mousemove', onMouseMove)
+  document.addEventListener('mouseup', onMouseUp)
+}
+
 const PANEL_LABELS = {
-  watchlist:    'Watchlisty',
-  scanners:     'Skanery',
+  watchlist:    'Watchlists',
+  search:       'Search',
+  scanners:     'Scanners',
   fundamentals: 'Fundamentals',
 }
 
@@ -33,6 +56,7 @@ const panelTitle = computed(() => PANEL_LABELS[appStore.activePanel] || '')
 
 const PANEL_COMPONENTS = {
   watchlist:    WatchlistPanel,
+  search:       SearchPanel,
   scanners:     ScannersPanel,
   fundamentals: FundamentalsPanel,
 }
@@ -48,6 +72,22 @@ const currentPanel = computed(() => PANEL_COMPONENTS[appStore.activePanel] ?? nu
   background-color: var(--bg-panel);
   border-left: 1px solid var(--border);
   overflow: hidden;
+  position: relative;
+}
+
+.panel-resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  z-index: 10;
+}
+
+.panel-resize-handle:hover {
+  background: var(--accent, #4fc3f7);
+  opacity: 0.4;
 }
 
 .panel-header {

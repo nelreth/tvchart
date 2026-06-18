@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { fetchScanners, fetchScannerResults } from '@/core/api.js'
+import { fetchScanners, fetchScannerResults, deleteScanner } from '@/core/api.js'
 import { useUiFeedbackStore } from '@/stores/uiFeedbackStore.js'
 
 export const useScannerStore = defineStore('scanner', {
@@ -62,6 +62,20 @@ export const useScannerStore = defineStore('scanner', {
     async refreshResults(scannerId) {
       delete this.results[scannerId]
       await this._loadResults(scannerId)
+    },
+
+    async deleteScanner(scannerId) {
+      try {
+        await deleteScanner(scannerId)
+        this.scanners = this.scanners.filter(s => s.id !== scannerId)
+        delete this.results[scannerId]
+        if (this.expandedId === scannerId) this.expandedId = null
+        useUiFeedbackStore().notify('success', 'Skaner usunięty')
+      } catch (e) {
+        useUiFeedbackStore().notify('error', `Błąd: ${e.message}`)
+        console.error('scannerStore.deleteScanner:', e)
+        throw e
+      }
     },
   },
 })

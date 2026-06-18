@@ -29,6 +29,8 @@ import {
   ref, watch, onMounted, onBeforeUnmount,
 } from 'vue'
 import { createChart, CandlestickSeries, LineSeries, HistogramSeries, ColorType, createTextWatermark } from 'lightweight-charts'
+import { createLineToolsPlugin } from 'lightweight-charts-line-tools-core';
+import { registerLinesPlugin } from 'lightweight-charts-line-tools-lines'
 import { useMarketStore } from '@/stores/marketStore.js'
 import { useAppStore }    from '@/stores/appStore.js'
 
@@ -36,6 +38,10 @@ const marketStore      = useMarketStore()
 const appStore         = useAppStore()
 const wrapperRef       = ref(null)
 const chartContainerRef = ref(null)
+const theme_dark = appStore.theme === 'dark'
+let upCandleColor       = theme_dark ? '#d0d4dc' : '#668797'
+
+const LINE_TOOLS_STORAGE_KEY = 'tv.lineToolsByTicker.v1'
 
 let chart       = null
 let mainSeries  = null
@@ -43,11 +49,84 @@ let ma10Series  = null
 let ma20Series  = null
 let ma50Series  = null
 let volSeries   = null
+let lineTools   = null
 let resizeObs   = null
 let drawingLines = []
 let textWatermark = null
 
 const drawingPointA = ref(null)
+
+let isRestoringLineTools = false
+
+function readLineToolsStorage() {
+  try {
+    const raw = localStorage.getItem(LINE_TOOLS_STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeLineToolsStorage(data) {
+  localStorage.setItem(LINE_TOOLS_STORAGE_KEY, JSON.stringify(data))
+}
+
+function saveLineToolsForTicker(ticker) {
+  if (!lineTools || !ticker) return
+  const map = readLineToolsStorage()
+  const serialized = lineTools.exportLineTools()
+
+  if (serialized === '[]') {
+    delete map[ticker]
+  } else {
+    map[ticker] = serialized
+  }
+
+  writeLineToolsStorage(map)
+}
+
+function restoreLineToolsForTicker(ticker) {
+  if (!lineTools) return
+
+  const map = readLineToolsStorage()
+  const serialized = map[ticker]
+
+  isRestoringLineTools = true
+  try {
+    lineTools.removeAllLineTools()
+    if (serialized) {
+      lineTools.importLineTools(serialized)
+    }
+  } finally {
+    isRestoringLineTools = false
+  }
+}
+
+function onLineToolsAfterEdit() {
+  if (isRestoringLineTools) return
+  saveLineToolsForTicker(marketStore.activeTicker)
+}
+
+
+function onChartDeleteKey(e) {
+  if (e.key !== 'Delete') return
+  if (!lineTools) return
+
+  const target = e.target
+  if (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    target?.isContentEditable
+  ) {
+    return
+  }
+
+  lineTools.removeSelectedLineTools()
+  saveLineToolsForTicker(marketStore.activeTicker)
+}
 
 // ── Watermark ──────────────────────────────────────────────────
 function createWatermark() {
@@ -74,6 +153,12 @@ function getChartTheme(theme) {
     layout: {
       background: { type: ColorType.Solid, color: dark ? '#1a1a2e' : '#ffffff' },
       textColor:  dark ? '#d1d4dc' : '#1e2026',
+      panes: { 
+        separatorColor: '#f22c3d',
+        separatorHoverColor: 'rgba(255, 0, 0, 0.1)',
+        enableResize: true,
+        height: 30,
+      },
     },
     grid: {
       vertLines: { color: dark ? '#2a2a4e' : '#e2e4e9' },
@@ -115,7 +200,13 @@ onMounted(async () => {
     priceFormat:  { type: 'volume' },
     priceScaleId: 'volume',
   })
-  volSeries.priceScale().applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } })
+  volSeries.moveToPane(1)
+  volSeries.priceScale().applyOptions({ scaleMargins: { top: 0, bottom: 0 } })
+  chart.panes()[1].setHeight(100)
+
+  lineTools = createLineToolsPlugin(chart, mainSeries)
+  registerLinesPlugin(lineTools)
+  lineTools.subscribeLineToolsAfterEdit(onLineToolsAfterEdit)
 
   // Lazy loading przy przewijaniu w lewo
   chart.timeScale().subscribeVisibleLogicalRangeChange(async (range) => {
@@ -137,6 +228,10 @@ onMounted(async () => {
 
   // Pierwsze ładowanie danych
   await marketStore.loadInitialPrices()
+  restoreLineToolsForTicker(marketStore.activeTicker)
+
+  window.addEventListener('keydown', onChartDeleteKey, true)
+
   createWatermark()
 
   // Obsługa kliknięć do rysowania linii
@@ -178,7 +273,11 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  saveLineToolsForTicker(marketStore.activeTicker)
+  lineTools?.unsubscribeLineToolsAfterEdit(onLineToolsAfterEdit)
+  window.removeEventListener('keydown', onChartDeleteKey, true)
   resizeObs?.disconnect()
+  lineTools = null
   textWatermark?.detach()
   drawingLines = []
   chart?.remove()
@@ -235,6 +334,26 @@ watch(
     }
   }
 )
+
+// ── Rysowanie linii ───────────────────────────────────────────
+watch(
+  () => appStore.lineToolTrigger,
+  (val) => {
+    if (val < 1 || !lineTools) return
+    const toolType = appStore.pendingLineToolType || 'TrendLine'
+    lineTools.addLineTool(toolType)
+  }
+)
+
+watch(
+  () => marketStore.activeTicker,
+  (newTicker, oldTicker) => {
+    if (!lineTools) return
+    if (oldTicker) saveLineToolsForTicker(oldTicker)
+    restoreLineToolsForTicker(newTicker)
+  }
+)
+
 </script>
 
 <style scoped>
