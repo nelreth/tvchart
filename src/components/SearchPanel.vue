@@ -70,6 +70,7 @@
           v-for="row in results"
           :key="row.ticker"
           class="result-row result-data"
+          :class="{ 'result-selected': row.ticker === selectedTicker }"
           @click="selectTicker(row.ticker)"
         >
           <span class="col-ticker">{{ row.ticker }}</span>
@@ -100,6 +101,7 @@ const results = ref([])
 const isSearching = ref(false)
 const error = ref(null)
 const hasSearched = ref(false)
+const selectedTicker = ref(null)
 
 async function handleSearch() {
   error.value = null
@@ -142,6 +144,7 @@ async function handleSearch() {
 }
 
 function selectTicker(ticker) {
+  selectedTicker.value = ticker
   marketStore.setTicker(ticker)
 }
 
@@ -304,6 +307,20 @@ function formatVolume(volume) {
 
 .result-data:hover {
   background: var(--bg-hover);
+}
+
+.result-data.result-selected {
+  background: var(--accent);
+  color: var(--bg-primary);
+}
+
+.result-data.result-selected .col-ticker {
+  color: var(--bg-primary);
+}
+
+.result-data.result-selected .col-price,
+.result-data.result-selected .col-volume {
+  color: var(--bg-primary);
 }
 
 .col-ticker {

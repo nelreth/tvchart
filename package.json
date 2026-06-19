@@ -8,11 +8,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.5.0",
-    "pinia": "^2.2.0",
     "lightweight-charts": "^5.2.0",
+    "lightweight-charts-indicators": "^0.4.2",
     "lightweight-charts-line-tools-core": "file:./packages/lightweight-charts-line-tools-core",
-    "lightweight-charts-line-tools-lines": "file:./packages/lightweight-charts-line-tools-lines"
+    "lightweight-charts-line-tools-lines": "file:./packages/lightweight-charts-line-tools-lines",
+    "oakscriptjs": "^0.3.0",
+    "pinia": "^2.2.0",
+    "vue": "^3.5.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",

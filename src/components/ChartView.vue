@@ -57,6 +57,17 @@ let textWatermark = null
 const drawingPointA = ref(null)
 
 let isRestoringLineTools = false
+let legend = null
+let legendInfo = {
+  name: '',
+  exchange: '',
+  adr20: 0,
+  open: 0,
+  high: 0,
+  low: 0,
+  close: 0,
+  volume: 0,
+}
 
 function readLineToolsStorage() {
   try {
@@ -144,6 +155,92 @@ function createWatermark() {
       },
     ],
   })
+}
+
+// ── Legenda ────────────────────────────────────────────────────
+function createLegend(container) {
+  legend = document.createElement('div')
+  legend.style.cssText = `
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    z-index: 10;
+    font-size: 12px;
+    line-height: 18px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: rgba(255, 255, 255, 0.8);
+    color: #7b7c80;
+    padding: 8px 12px;
+    border-radius: 4px;
+    pointer-events: none;
+  `
+  container.appendChild(legend)
+  updateLegend()
+}
+
+function updateLegend() {
+  if (!legend) return
+  const { name, exchange, adr20, open, high, low, close, volume } = legendInfo
+  const ticker = marketStore.activeTicker
+  const nameStr = name ? `${name}` : ticker
+  const exchangeStr = exchange ? ` - ${exchange}` : ''
+  const adrStr = adr20 > 0 ? `- ADR%20: <span style="color: red">${adr20.toFixed(2)}%</span>` : ''
+  const volStr = volume > 0 ? `Vol: ${formatVolume(volume)}` : 'Vol: —'
+  legend.innerHTML = `
+    <div style="font-weight: 600; margin-bottom: 4px;">${nameStr}${exchangeStr} ${adrStr}</div>
+    <div>O: ${open.toFixed(2)} H: ${high.toFixed(2)} L: ${low.toFixed(2)} C: ${close.toFixed(2)} ${volStr}</div>
+  `
+}
+
+function formatVolume(vol) {
+  if (vol >= 1000000) return (vol / 1000000).toFixed(1) + 'M'
+  if (vol >= 1000) return (vol / 1000).toFixed(1) + 'K'
+  return vol.toString()
+}
+
+function calculateADR20(candles) {
+  if (!candles || candles.length < 20) return 0
+  
+  // Pobieramy dokładnie ostatnich 20 świeczek
+  const last20 = candles.slice(-20)
+  
+  let sumRatios = 0
+  
+  // 1. Dla każdego dnia liczymy stosunek High do Low i sumujemy
+  for (let i = 0; i < last20.length; i++) {
+    const candle = last20[i]
+    
+    // Zabezpieczenie na wypadek gdyby low wynosiło 0 (np. błąd danych)
+    if (candle.low > 0) {
+      sumRatios += (candle.high / candle.low)
+    } else {
+      sumRatios += 1 // Jeśli low to 0, traktujemy to jako brak zmiany (stosunek 1:1)
+    }
+  }
+  
+  // 2. Obliczamy średnią arytmetyczną z tych stosunków (odpowiednik sma w Pine Script)
+  const smaHighLowRatio = sumRatios / 20
+  
+  // 3. Odpowiednik formuły z TradingView: 100 * (sma - 1)
+  const adrPineStyle = (smaHighLowRatio - 1) * 100
+  
+  return adrPineStyle
+}
+
+async function loadCompanyInfo(ticker) {
+  try {
+    const response = await fetch(`http://localhost:6070/tickers?search=${ticker}`)
+    if (response.ok) {
+      const data = await response.json()
+      const company = data.find(c => c.ticker === ticker.toUpperCase())
+      if (company) {
+        legendInfo.name = company.name || ''
+        legendInfo.exchange = company.exchange || ''
+      }
+    }
+  } catch (e) {
+    console.error('Error loading company info:', e)
+  }
 }
 
 // ── Opcje wyglądu wykresu per motyw ──────────────────────────────
@@ -234,6 +331,30 @@ onMounted(async () => {
 
   createWatermark()
 
+  // Legenda
+  createLegend(chartContainerRef.value)
+  await loadCompanyInfo(marketStore.activeTicker)
+
+  // Obsługa crosshair – aktualizacja legendy
+  chart.subscribeCrosshairMove((param) => {
+    if (!param.time) {
+      updateLegend()
+      return
+    }
+    const data = param.seriesData.get(mainSeries)
+    if (data) {
+      legendInfo.open = data.open || 0
+      legendInfo.high = data.high || 0
+      legendInfo.low = data.low || 0
+      legendInfo.close = data.close || 0
+
+      // Pobierz volume z candles array bezpośrednio
+      const candle = marketStore.candles.find(c => c.time === param.time)
+      legendInfo.volume = candle?.volume || 0
+      updateLegend()
+    }
+  })
+
   // Obsługa kliknięć do rysowania linii
   chart.subscribeClick((param) => {
     if (!appStore.drawingMode || !param.time || !param.point) return
@@ -279,6 +400,7 @@ onBeforeUnmount(() => {
   resizeObs?.disconnect()
   lineTools = null
   textWatermark?.detach()
+  legend?.remove()
   drawingLines = []
   chart?.remove()
   chart = null
@@ -300,6 +422,18 @@ watch(
     ma20Series.setData(marketStore.ma20)
     ma50Series.setData(marketStore.ma50)
     volSeries.setData(marketStore.volumeData)
+
+    // Aktualizuj legendę z ostatnim słupkiem
+    if (marketStore.candles.length > 0) {
+      const lastCandle = marketStore.candles[marketStore.candles.length - 1]
+      legendInfo.open = lastCandle.open
+      legendInfo.high = lastCandle.high
+      legendInfo.low = lastCandle.low
+      legendInfo.close = lastCandle.close
+      legendInfo.volume = lastCandle.volume
+      legendInfo.adr20 = calculateADR20(marketStore.candles)
+      updateLegend()
+    }
   },
   { deep: false }
 )
@@ -316,7 +450,17 @@ watch(
 // ── Zmiana tickera – aktualizuj watermark ──────────────────────
 watch(
   () => marketStore.activeTicker,
-  () => createWatermark()
+  async (ticker) => {
+    createWatermark()
+    await loadCompanyInfo(ticker)
+    legendInfo.open = 0
+    legendInfo.high = 0
+    legendInfo.low = 0
+    legendInfo.close = 0
+    legendInfo.volume = 0
+    legendInfo.adr20 = 0
+    updateLegend()
+  }
 )
 
 // ── Screenshot ────────────────────────────────────────────────
@@ -412,6 +556,10 @@ watch(
   pointer-events: none;
   z-index: 10;
   white-space: nowrap;
+}
+
+.test123 {
+  color: red;
 }
 
 .chart-loading-bar {
