@@ -126,7 +126,7 @@ async function handleSearch() {
       price_to: operator.value === 'between' ? priceTo.value : null,
     }
 
-    const response = await fetch('http://localhost:6070/search/by-price', {
+    const response = await fetch('http://192.168.1.145:6070/search/by-price', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -204,7 +204,7 @@ function formatVolume(volume) {
 .input-price:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.15);
+  box-shadow: 0 0 0 2px var(--focus-ring-soft);
 }
 
 .criteria-inputs {
@@ -244,10 +244,10 @@ function formatVolume(volume) {
 
 .search-error {
   padding: 8px 12px;
-  background: rgba(239, 83, 80, 0.15);
-  border: 1px solid #ef5350;
+  background: var(--status-error-bg);
+  border: 1px solid var(--status-error);
   border-radius: 4px;
-  color: #ef5350;
+  color: var(--status-error);
   font-size: 11px;
 }
 

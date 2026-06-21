@@ -119,7 +119,7 @@ onMounted(async () => {
 })
 
 function colorHex(wl) {
-  return store.colorById(wl.color_id)?.hex_code || '#888888'
+  return store.colorById(wl.color_id)?.hex_code || 'var(--text-muted)'
 }
 
 function colorLabel(wl) {
@@ -158,7 +158,7 @@ async function deleteNamedList(wl) {
   padding: 24px;
   color: var(--text-muted);
 }
-.wl-error { color: #ef5350; }
+.wl-error { color: var(--status-error); }
 
 /* Sekcje */
 .wl-section {
@@ -283,7 +283,7 @@ async function deleteNamedList(wl) {
 }
 .wl-rm:hover {
   background: var(--bg-hover);
-  color: #ef5350;
+  color: var(--status-error);
 }
 
 .wl-grp-hdr:hover .wl-del { opacity: 1; }
@@ -301,8 +301,8 @@ async function deleteNamedList(wl) {
   flex-shrink: 0;
 }
 .wl-del:hover {
-  background: #ef535022;
-  color: #ef5350;
+  background: var(--status-error-bg);
+  color: var(--status-error);
 }
 
 .wl-empty-row {

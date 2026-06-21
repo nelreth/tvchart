@@ -144,7 +144,7 @@ function formatDate(ts) {
   color: var(--text-muted);
 }
 .fund-muted  { color: var(--text-muted); }
-.fund-error  { color: #ef5350; justify-content: flex-start; padding: 12px; }
+.fund-error  { color: var(--status-error); justify-content: flex-start; padding: 12px; }
 
 /* Brak danych */
 .fund-not-found {

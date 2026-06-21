@@ -280,7 +280,7 @@ async function confirmCreate() {
 .toolbar-btn-active,
 .toolbar-btn-active:hover {
   background: var(--accent) !important;
-  color: #fff !important;
+  color: var(--text-on-accent) !important;
 }
 .toolbar-btn:hover {
   background: var(--bg-btn-hover);
@@ -325,7 +325,7 @@ async function confirmCreate() {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px var(--shadow-medium);
   z-index: 200;
 }
 .color-opt {
@@ -340,7 +340,7 @@ async function confirmCreate() {
 }
 .color-opt:hover { transform: scale(1.2); }
 .color-opt-active {
-  box-shadow: 0 0 0 2px var(--bg-elevated), 0 0 0 3.5px #ffffff;
+  box-shadow: 0 0 0 2px var(--bg-elevated), 0 0 0 3.5px var(--text-on-accent);
 }
 .color-opt-dot {
   width: 16px;
@@ -357,9 +357,9 @@ async function confirmCreate() {
   justify-content: center;
   font-size: 10px;
   font-weight: bold;
-  color: #fff;
+  color: var(--text-on-accent);
   pointer-events: none;
-  text-shadow: 0 0 3px rgba(0,0,0,0.6);
+  text-shadow: 0 0 3px var(--shadow-strong);
 }
 .color-opt-remove { background: var(--bg-hover); border-radius: 4px !important; }
 .color-opt-x { font-size: 14px; color: var(--text-secondary); line-height: 1; }
@@ -383,7 +383,7 @@ async function confirmCreate() {
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px var(--shadow-medium);
   z-index: 200;
   overflow: hidden;
 }
@@ -429,7 +429,7 @@ async function confirmCreate() {
   border: 1px solid var(--border);
   flex-shrink: 0;
 }
-.create-ok { background: var(--accent); border-color: var(--accent); color: #fff; }
+.create-ok { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
 .create-ok:hover:not(:disabled) { background: var(--accent-hover); }
 .create-ok:disabled { opacity: 0.4; cursor: not-allowed; }
 .create-cancel { background: var(--bg-btn); color: var(--text-secondary); }

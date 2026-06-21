@@ -1,5 +1,6 @@
 <template>
-  <div class="chart-wrapper" ref="wrapperRef" :class="{ 'drawing-mode': appStore.drawingMode }">
+  <div class="chart-wrapper" ref="wrapperRef" :class="{ 'drawing-mode': appStore.drawingMode }" :style="componentThemeStyle">
+
     <!-- Loading overlay -->
     <div v-if="marketStore.isLoadingChart && marketStore.candles.length === 0" class="chart-overlay">
       <span>Ładowanie danych…</span>
@@ -26,11 +27,12 @@
 
 <script setup>
 import {
-  ref, watch, onMounted, onBeforeUnmount,
+  ref, watch, onMounted, onBeforeUnmount, computed,
 } from 'vue'
 import { createChart, CandlestickSeries, LineSeries, HistogramSeries, ColorType, createTextWatermark } from 'lightweight-charts'
 import { createLineToolsPlugin } from 'lightweight-charts-line-tools-core';
 import { registerLinesPlugin } from 'lightweight-charts-line-tools-lines'
+import { getTheme } from '@/core/themes.js'
 import { useMarketStore } from '@/stores/marketStore.js'
 import { useAppStore }    from '@/stores/appStore.js'
 
@@ -38,8 +40,6 @@ const marketStore      = useMarketStore()
 const appStore         = useAppStore()
 const wrapperRef       = ref(null)
 const chartContainerRef = ref(null)
-const theme_dark = appStore.theme === 'dark'
-let upCandleColor       = theme_dark ? '#d0d4dc' : '#668797'
 
 const LINE_TOOLS_STORAGE_KEY = 'tv.lineToolsByTicker.v1'
 
@@ -68,6 +68,15 @@ let legendInfo = {
   close: 0,
   volume: 0,
 }
+
+const componentThemeStyle = computed(() => {
+  const c = getTheme(appStore.theme)
+  return {
+    '--chart-error-color': c.chartErrorColor,
+    '--drawing-hint-bg': c.drawingHintBg,
+    '--drawing-hint-text': c.drawingHintText,
+  }
+})
 
 function readLineToolsStorage() {
   try {
@@ -143,7 +152,7 @@ function onChartDeleteKey(e) {
 function createWatermark() {
   if (!chart) return
   if (textWatermark) textWatermark.detach()
-  const color = appStore.theme === 'dark' ? 'rgba(155, 125, 255, 0.3)' : 'rgba(202, 202, 202, 0.3)'
+  const color = getTheme(appStore.theme).watermarkColor
   textWatermark = createTextWatermark(chart.panes()[0], {
     horzAlign: 'center',
     vertAlign: 'center',
@@ -159,6 +168,7 @@ function createWatermark() {
 
 // ── Legenda ────────────────────────────────────────────────────
 function createLegend(container) {
+  const c = getTheme(appStore.theme)
   legend = document.createElement('div')
   legend.style.cssText = `
     position: absolute;
@@ -168,8 +178,8 @@ function createLegend(container) {
     font-size: 12px;
     line-height: 18px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: rgba(255, 255, 255, 0.8);
-    color: #7b7c80;
+    background: ${c.legendBg};
+    color: ${c.legendText};
     padding: 8px 12px;
     border-radius: 4px;
     pointer-events: none;
@@ -178,13 +188,21 @@ function createLegend(container) {
   updateLegend()
 }
 
+function applyLegendTheme() {
+  if (!legend) return
+  const c = getTheme(appStore.theme)
+  legend.style.background = c.legendBg
+  legend.style.color = c.legendText
+}
+
 function updateLegend() {
   if (!legend) return
   const { name, exchange, adr20, open, high, low, close, volume } = legendInfo
   const ticker = marketStore.activeTicker
+  const c = getTheme(appStore.theme)
   const nameStr = name ? `${name}` : ticker
   const exchangeStr = exchange ? ` - ${exchange}` : ''
-  const adrStr = adr20 > 0 ? `- ADR%20: <span style="color: red">${adr20.toFixed(2)}%</span>` : ''
+  const adrStr = adr20 > 0 ? `- ADR%20: <span style="color: ${c.adrPositiveColor}">${adr20.toFixed(2)}%</span>` : ''
   const volStr = volume > 0 ? `Vol: ${formatVolume(volume)}` : 'Vol: —'
   legend.innerHTML = `
     <div style="font-weight: 600; margin-bottom: 4px;">${nameStr}${exchangeStr} ${adrStr}</div>
@@ -207,9 +225,7 @@ function calculateADR20(candles) {
   let sumRatios = 0
   
   // 1. Dla każdego dnia liczymy stosunek High do Low i sumujemy
-  for (let i = 0; i < last20.length; i++) {
-    const candle = last20[i]
-    
+  for (const candle of last20) {
     // Zabezpieczenie na wypadek gdyby low wynosiło 0 (np. błąd danych)
     if (candle.low > 0) {
       sumRatios += (candle.high / candle.low)
@@ -229,7 +245,7 @@ function calculateADR20(candles) {
 
 async function loadCompanyInfo(ticker) {
   try {
-    const response = await fetch(`http://localhost:6070/tickers?search=${ticker}`)
+    const response = await fetch(`http://192.168.1.145:6070/tickers?search=${ticker}`)
     if (response.ok) {
       const data = await response.json()
       const company = data.find(c => c.ticker === ticker.toUpperCase())
@@ -245,34 +261,36 @@ async function loadCompanyInfo(ticker) {
 
 // ── Opcje wyglądu wykresu per motyw ──────────────────────────────
 function getChartTheme(theme) {
-  const dark = theme === 'dark'
+  const c = getTheme(theme)
   return {
     layout: {
-      background: { type: ColorType.Solid, color: dark ? '#1a1a2e' : '#ffffff' },
-      textColor:  dark ? '#d1d4dc' : '#1e2026',
+      background: { type: ColorType.Solid, color: c.background },
+      textColor:  c.textColor,
       panes: { 
-        separatorColor: '#f22c3d',
-        separatorHoverColor: 'rgba(255, 0, 0, 0.1)',
+        separatorColor: c.paneSeparatorColor,
+        separatorHoverColor: c.paneSeparatorHoverColor,
         enableResize: true,
         height: 30,
       },
     },
     grid: {
-      vertLines: { color: dark ? '#2a2a4e' : '#e2e4e9' },
-      horzLines: { color: dark ? '#2a2a4e' : '#e2e4e9' },
+      vertLines: { color: c.gridColor },
+      horzLines: { color: c.gridColor },
     },
     crosshair: {
-      vertLine: { color: dark ? '#9B7DFF' : '#6930C3', labelBackgroundColor: dark ? '#9B7DFF' : '#6930C3' },
-      horzLine: { color: dark ? '#9B7DFF' : '#6930C3', labelBackgroundColor: dark ? '#9B7DFF' : '#6930C3' },
+      vertLine: { color: c.crosshairColor, labelBackgroundColor: c.crosshairColor },
+      horzLine: { color: c.crosshairColor, labelBackgroundColor: c.crosshairColor },
+      mode: 0, 
     },
-    rightPriceScale: { borderColor: dark ? '#2a2a4e' : '#e2e4e9' },
-    timeScale:       { borderColor: dark ? '#2a2a4e' : '#e2e4e9', timeVisible: true, rightOffset: 50 },
+    rightPriceScale: { borderColor: c.borderColor },
+    timeScale:       { borderColor: c.borderColor, timeVisible: true, rightOffset: 50 },
   }
 }
 
 // ── Inicjalizacja wykresu ──────────────────────────────────────
 onMounted(async () => {
   const container = chartContainerRef.value
+  const themeColors = getTheme(appStore.theme)
   chart = createChart(container, {
     width:  container.clientWidth,
     height: container.clientHeight,
@@ -282,16 +300,32 @@ onMounted(async () => {
   })
 
   mainSeries = chart.addSeries(CandlestickSeries, {
-    upColor:        '#d0d4dc', downColor:       '#668797',
-    borderUpColor:  '#000000', borderDownColor: '#000000',
-    // borderUpColor:  '#26a69a', borderDownColor: '#ef5350',
-    wickUpColor:    '#000000', wickDownColor:   '#000000',
-    // wickUpColor:    '#26a69a', wickDownColor:   '#ef5350',
+    upColor: themeColors.mainSeries.upColor,
+    downColor: themeColors.mainSeries.downColor,
+    borderUpColor: themeColors.mainSeries.borderUpColor,
+    borderDownColor: themeColors.mainSeries.borderDownColor,
+    wickUpColor: themeColors.mainSeries.wickUpColor,
+    wickDownColor: themeColors.mainSeries.wickDownColor,
   })
 
-  ma10Series = chart.addSeries(LineSeries, { color: '#228B22', lineWidth: 1, priceLineVisible: false, lastValueVisible: false })
-  ma20Series = chart.addSeries(LineSeries, { color: '#D30000', lineWidth: 1, priceLineVisible: false, lastValueVisible: false })
-  ma50Series = chart.addSeries(LineSeries, { color: '#A9AAA8', lineWidth: 1, priceLineVisible: false, lastValueVisible: false })
+  ma10Series = chart.addSeries(LineSeries, {
+    color: themeColors.ma10Series.color,
+    lineWidth: themeColors.ma10Series.lineWidth,
+    priceLineVisible: false,
+    lastValueVisible: false,
+  })
+  ma20Series = chart.addSeries(LineSeries, {
+    color: themeColors.ma20Series.color,
+    lineWidth: themeColors.ma20Series.lineWidth,
+    priceLineVisible: false,
+    lastValueVisible: false,
+  })
+  ma50Series = chart.addSeries(LineSeries, {
+    color: themeColors.ma50Series.color,
+    lineWidth: themeColors.ma50Series.lineWidth,
+    priceLineVisible: false,
+    lastValueVisible: false,
+  })
 
   volSeries = chart.addSeries(HistogramSeries, {
     priceFormat:  { type: 'volume' },
@@ -368,7 +402,7 @@ onMounted(async () => {
         ? [drawingPointA.value, pt]
         : [pt, drawingPointA.value]
       const line = chart.addSeries(LineSeries, {
-        color: '#FFD700',
+        color: getTheme(appStore.theme).drawingLineColor,
         lineWidth: 1,
         priceLineVisible: false,
         lastValueVisible: false,
@@ -443,6 +477,20 @@ watch(
   () => appStore.theme,
   (theme) => {
     chart?.applyOptions(getChartTheme(theme))
+    const c = getTheme(theme)
+    mainSeries?.applyOptions({
+      upColor: c.mainSeries.upColor,
+      downColor: c.mainSeries.downColor,
+      borderUpColor: c.mainSeries.borderUpColor,
+      borderDownColor: c.mainSeries.borderDownColor,
+      wickUpColor: c.mainSeries.wickUpColor,
+      wickDownColor: c.mainSeries.wickDownColor,
+    })
+    ma10Series?.applyOptions({ color: c.ma10Series.color, lineWidth: c.ma10Series.lineWidth })
+    ma20Series?.applyOptions({ color: c.ma20Series.color, lineWidth: c.ma20Series.lineWidth })
+    ma50Series?.applyOptions({ color: c.ma50Series.color, lineWidth: c.ma50Series.lineWidth })
+    applyLegendTheme()
+    updateLegend()
     createWatermark()
   }
 )
@@ -527,7 +575,7 @@ watch(
 }
 
 .chart-error {
-  color: #ef5350;
+  color: var(--chart-error-color);
 }
 
 .chart-error button {
@@ -548,18 +596,14 @@ watch(
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.65);
-  color: #fff;
+  background: var(--drawing-hint-bg);
+  color: var(--drawing-hint-text);
   font-size: 12px;
   padding: 5px 12px;
   border-radius: 4px;
   pointer-events: none;
   z-index: 10;
   white-space: nowrap;
-}
-
-.test123 {
-  color: red;
 }
 
 .chart-loading-bar {

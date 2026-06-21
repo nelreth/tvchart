@@ -58,17 +58,17 @@ const ICONS = {
   border-radius: 6px;
   border-left: 3px solid currentColor;
   background: var(--bg-elevated);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 16px var(--shadow-soft);
   cursor: pointer;
   pointer-events: all;
   transition: opacity 0.2s, box-shadow 0.2s;
   word-break: break-word;
 }
-.toast:hover { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); }
+.toast:hover { box-shadow: 0 4px 20px var(--shadow-strong); }
 
-.toast-error   { color: #ef5350; }
-.toast-success { color: #26a69a; }
-.toast-warning { color: #f1c40f; }
+.toast-error   { color: var(--status-error); }
+.toast-success { color: var(--status-success); }
+.toast-warning { color: var(--status-warning); }
 .toast-info    { color: var(--accent); }
 
 .toast-icon {

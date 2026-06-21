@@ -1,63 +1,89 @@
 import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import { getTheme } from '@/core/themes.js'
 
-export const useAppStore = defineStore('app', {
-  state: () => ({
-    theme: localStorage.getItem('theme') || 'dark',
-    isFullscreen: false,
-    activePanel: null,          // 'watchlist' | 'scanners' | 'fundamentals' | null
-    isContextPanelOpen: false,
-    screenshotTrigger: 0,       // inkrementowany aby wywołać screenshot w ChartView
-    lineToolTrigger: 0,         // inkrementowany aby wywołać tryb rysowania w ChartView
-    pendingLineToolType: null,  // np. 'TrendLine'
-    drawingMode: false,           // tryb rysowania linii na wykresie
-  }),
+export const useAppStore = defineStore('app', () => {
+  const theme = ref(localStorage.getItem('theme') || 'dark')
+  const themeColors = ref(getTheme(theme.value))
 
-  actions: {
-    toggleTheme() {
-      this.theme = this.theme === 'dark' ? 'light' : 'dark'
-      localStorage.setItem('theme', this.theme)
-      document.documentElement.setAttribute('data-theme', this.theme)
-    },
+  const isFullscreen = ref(false)
+  const drawingMode = ref(false)
 
-    async toggleFullscreen() {
-      try {
-        if (!document.fullscreenElement) {
-          await document.documentElement.requestFullscreen()
-          this.isFullscreen = true
-        } else {
-          await document.exitFullscreen()
-          this.isFullscreen = false
-        }
-      } catch (e) {
-        console.warn('Fullscreen API error:', e)
-      }
-    },
+  const screenshotTrigger = ref(0)
+  const lineToolTrigger = ref(0)
+  const pendingLineToolType = ref(null)
 
-    setActivePanel(panelKey) {
-      if (this.activePanel === panelKey && this.isContextPanelOpen) {
-        this.closePanel()
+  const activePanel = ref('watchlist')
+  const isContextPanelOpen = ref(true)
+
+  function setTheme(newTheme) {
+    if (!['light', 'dark'].includes(newTheme)) return
+    theme.value = newTheme
+    themeColors.value = getTheme(newTheme)
+    localStorage.setItem('theme', newTheme)
+  }
+
+  function toggleTheme() {
+    setTheme(theme.value === 'dark' ? 'light' : 'dark')
+  }
+
+  async function toggleFullscreen() {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen()
+        isFullscreen.value = true
       } else {
-        this.activePanel = panelKey
-        this.isContextPanelOpen = true
+        await document.exitFullscreen()
+        isFullscreen.value = false
       }
-    },
+    } catch {
+      isFullscreen.value = Boolean(document.fullscreenElement)
+    }
+  }
 
-    closePanel() {
-      this.activePanel = null
-      this.isContextPanelOpen = false
-    },
+  function toggleDrawingMode() {
+    drawingMode.value = !drawingMode.value
+  }
 
-    requestScreenshot() {
-      this.screenshotTrigger++
-    },
+  function requestScreenshot() {
+    screenshotTrigger.value += 1
+  }
 
-    requestLineTool(toolType = 'TrendLine') {
-      this.pendingLineToolType = toolType
-      this.lineToolTrigger++
-    },
+  function requestLineTool(toolType = 'TrendLine') {
+    pendingLineToolType.value = toolType
+    lineToolTrigger.value += 1
+  }
 
-    toggleDrawingMode() {
-      this.drawingMode = !this.drawingMode
-    },
-  },
+  function setActivePanel(panelKey) {
+    if (activePanel.value === panelKey && isContextPanelOpen.value) {
+      isContextPanelOpen.value = false
+      return
+    }
+    activePanel.value = panelKey
+    isContextPanelOpen.value = true
+  }
+
+  function closePanel() {
+    isContextPanelOpen.value = false
+  }
+
+  return {
+    theme,
+    themeColors,
+    isFullscreen,
+    drawingMode,
+    screenshotTrigger,
+    lineToolTrigger,
+    pendingLineToolType,
+    activePanel,
+    isContextPanelOpen,
+    setTheme,
+    toggleTheme,
+    toggleFullscreen,
+    toggleDrawingMode,
+    requestScreenshot,
+    requestLineTool,
+    setActivePanel,
+    closePanel,
+  }
 })

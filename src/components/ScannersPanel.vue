@@ -160,7 +160,7 @@ function formatVal(v) {
   padding: 24px;
   color: var(--text-muted);
 }
-.sc-error  { color: #ef5350; }
+.sc-error  { color: var(--status-error); }
 .sc-empty  { font-style: italic; }
 
 /* Element skanera */
@@ -230,9 +230,9 @@ function formatVal(v) {
   flex-shrink: 0;
   align-self: center;
 }
-.sc-status-completed { background: #1a3a2a; color: #2ecc71; }
-.sc-status-failed    { background: #3a1a1a; color: #ef5350; }
-.sc-status-pending   { background: #2a2a1a; color: #f1c40f; }
+.sc-status-completed { background: var(--status-success-bg); color: var(--status-success); }
+.sc-status-failed    { background: var(--status-failed-bg); color: var(--status-error); }
+.sc-status-pending   { background: var(--status-warning-bg); color: var(--status-warning); }
 
 /* Przycisk usuwania */
 .sc-delete-btn {
@@ -241,8 +241,8 @@ function formatVal(v) {
   height: 20px;
   padding: 0;
   border: none;
-  background: transparent;
-  color: var(--text-muted);
+  background: var(--status-error-bg);
+  color: var(--status-error);
   cursor: pointer;
   font-size: 14px;
   display: flex;

@@ -149,7 +149,7 @@ function confirm() {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -166,7 +166,7 @@ function confirm() {
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--shadow-strong);
 }
 
 /* Header */
@@ -297,7 +297,7 @@ function confirm() {
 .btn-confirm {
   background: var(--accent);
   border: 1px solid var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 .btn-confirm:hover:not(:disabled) { background: var(--accent-hover); }
 .btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
