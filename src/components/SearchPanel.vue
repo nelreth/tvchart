@@ -124,14 +124,14 @@
       <div class="results-table">
         <!-- Nagłówek -->
         <div class="result-row result-header" :class="{ 'has-avg': showAvgVolume }">
-          <span class="col-ticker">Ticker</span>
-          <span class="col-price">Price</span>
-          <span class="col-volume">Volume</span>
-          <span v-if="showAvgVolume" class="col-volume">Avg 10d</span>
+          <span class="col-ticker col-sortable" @click="sortBy('ticker')">Ticker<span class="sort-icon">{{ sortIcon('ticker') }}</span></span>
+          <span class="col-price col-sortable" @click="sortBy('price')">Price<span class="sort-icon">{{ sortIcon('price') }}</span></span>
+          <span class="col-volume col-sortable" @click="sortBy('volume')">Volume<span class="sort-icon">{{ sortIcon('volume') }}</span></span>
+          <span v-if="showAvgVolume" class="col-volume col-sortable" @click="sortBy('avg_volume')">Avg 10d<span class="sort-icon">{{ sortIcon('avg_volume') }}</span></span>
         </div>
         <!-- Wiersze -->
         <div
-          v-for="row in results"
+          v-for="row in sortedResults"
           :key="row.ticker"
           class="result-row result-data"
           :class="{ 'result-selected': row.ticker === selectedTicker, 'has-avg': showAvgVolume }"
@@ -201,6 +201,33 @@ const error = ref(null)
 const hasSearched = ref(false)
 const selectedTicker = ref(null)
 
+const sortCol = ref(null)
+const sortDir = ref('desc') // pierwsze kliknięcie -> desc
+
+const sortedResults = computed(() => {
+  if (!sortCol.value) return results.value
+  return [...results.value].sort((a, b) => {
+    const av = a[sortCol.value] ?? ''
+    const bv = b[sortCol.value] ?? ''
+    const cmp = typeof av === 'string' ? av.localeCompare(bv) : av - bv
+    return sortDir.value === 'desc' ? -cmp : cmp
+  })
+})
+
+function sortBy(col) {
+  if (sortCol.value === col) {
+    sortDir.value = sortDir.value === 'desc' ? 'asc' : 'desc'
+  } else {
+    sortCol.value = col
+    sortDir.value = 'desc'
+  }
+}
+
+function sortIcon(col) {
+  if (sortCol.value !== col) return ''
+  return sortDir.value === 'desc' ? ' ▼' : ' ▲'
+}
+
 async function handleSearch() {
   error.value = null
   hasSearched.value = true
@@ -238,6 +265,7 @@ async function handleSearch() {
       vol_to: volOperator.value === 'between' ? volTo.value : null,
       sector: selectedSector.value || null,
       industry: selectedIndustry.value || null,
+      include_avg_volume: showAvgVolume.value,
     }
 
     const response = await fetch(`http://localhost:6070/search/by-price`, {
@@ -433,6 +461,19 @@ function formatVolume(volume) {
   border-bottom: 1px solid var(--border);
   font-weight: 600;
   color: var(--text-secondary);
+}
+
+.col-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.col-sortable:hover {
+  color: var(--text-primary);
+}
+
+.sort-icon {
+  font-size: 9px;
+  opacity: 0.8;
 }
 
 .result-data {
