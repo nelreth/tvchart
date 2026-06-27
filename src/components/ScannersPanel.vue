@@ -72,7 +72,7 @@
                 :key="row.ticker + idx"
                 class="sc-row sc-row-data"
                 :class="{ 'sc-row-active': row.ticker === marketStore.activeTicker }"
-                @click="marketStore.setTicker(row.ticker)"
+                @click="panelStore.setActiveTicker(row.ticker)"
               >
                 <span class="sc-col-rank">{{ row.rank ?? idx + 1 }}</span>
                 <span class="sc-col-ticker sc-ticker">{{ row.ticker }}</span>
@@ -95,9 +95,11 @@
 import { computed, ref, onMounted } from 'vue'
 import { useScannerStore } from '@/stores/scannerStore.js'
 import { useMarketStore }  from '@/stores/marketStore.js'
+import { usePanelStore }   from '@/stores/panelStore.js'
 
 const store       = useScannerStore()
 const marketStore = useMarketStore()
+const panelStore  = usePanelStore()
 const deletingId  = ref(null)
 
 onMounted(() => store.init())

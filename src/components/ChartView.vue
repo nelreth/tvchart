@@ -29,14 +29,23 @@
 import {
   ref, watch, onMounted, onBeforeUnmount, computed,
 } from 'vue'
-import { createChart, CandlestickSeries, LineSeries, HistogramSeries, ColorType, createTextWatermark } from 'lightweight-charts'
+import { createChart, CandlestickSeries, LineSeries, HistogramSeries, ColorType, createTextWatermark, createSeriesMarkers } from 'lightweight-charts'
 import { createLineToolsPlugin } from 'lightweight-charts-line-tools-core';
 import { registerLinesPlugin } from 'lightweight-charts-line-tools-lines'
 import { getTheme } from '@/core/themes.js'
-import { useMarketStore } from '@/stores/marketStore.js'
+import { useMarketStore, useMarket2Store } from '@/stores/marketStore.js'
 import { useAppStore }    from '@/stores/appStore.js'
 
-const marketStore      = useMarketStore()
+const props = defineProps({
+  storeKey: { type: String, default: 'primary' },
+})
+
+const _primary   = useMarketStore()
+const _secondary = useMarket2Store()
+const store      = props.storeKey === 'secondary' ? _secondary : _primary
+// alias dla czytelności kodu poniżej
+const marketStore = store
+
 const appStore         = useAppStore()
 const wrapperRef       = ref(null)
 const chartContainerRef = ref(null)
@@ -245,7 +254,7 @@ function calculateADR20(candles) {
 
 async function loadCompanyInfo(ticker) {
   try {
-    const response = await fetch(`http://192.168.1.145:6070/tickers?search=${ticker}`)
+    const response = await fetch(`http://localhost:6070/tickers?search=${ticker}`)
     if (response.ok) {
       const data = await response.json()
       const company = data.find(c => c.ticker === ticker.toUpperCase())
@@ -259,6 +268,37 @@ async function loadCompanyInfo(ticker) {
   }
 }
 
+let _earningsMarkers = []
+let _earningsPlugin  = null   // ISeriesMarkersPluginApi — tworzony raz po init serii
+
+function _initEarningsPlugin() {
+  if (_earningsPlugin || !mainSeries) return
+  _earningsPlugin = createSeriesMarkers(mainSeries, [])
+}
+
+async function loadEarningsMarkers(ticker) {
+  if (!_earningsPlugin) return
+  _earningsMarkers = []
+  try {
+    const r = await fetch(`http://localhost:6070/earnings/${ticker}`)
+    if (!r.ok) { _earningsPlugin.setMarkers([]); return }
+    const rows = await r.json()
+    const color = getTheme(appStore.theme).earningsMarkerColor ?? '#f59e0b'
+    _earningsMarkers = rows.map(row => ({
+      time:     Math.floor(new Date(row.date + 'T00:00:00Z').getTime() / 1000),
+      position: 'belowBar',
+      color,
+      shape:    'circle',
+      text:     'E',
+      size:     0,
+    }))
+    _earningsPlugin.setMarkers(_earningsMarkers)
+  } catch (e) {
+    console.error('Error loading earnings markers:', e)
+    _earningsPlugin.setMarkers([])
+  }
+}
+
 // ── Opcje wyglądu wykresu per motyw ──────────────────────────────
 function getChartTheme(theme) {
   const c = getTheme(theme)
@@ -266,6 +306,7 @@ function getChartTheme(theme) {
     layout: {
       background: { type: ColorType.Solid, color: c.background },
       textColor:  c.textColor,
+      fontFamily: "'Roboto Mono', monospace",
       panes: { 
         separatorColor: c.paneSeparatorColor,
         separatorHoverColor: c.paneSeparatorHoverColor,
@@ -307,6 +348,7 @@ onMounted(async () => {
     wickUpColor: themeColors.mainSeries.wickUpColor,
     wickDownColor: themeColors.mainSeries.wickDownColor,
   })
+  _initEarningsPlugin()
 
   ma10Series = chart.addSeries(LineSeries, {
     color: themeColors.ma10Series.color,
@@ -368,6 +410,7 @@ onMounted(async () => {
   // Legenda
   createLegend(chartContainerRef.value)
   await loadCompanyInfo(marketStore.activeTicker)
+  await loadEarningsMarkers(marketStore.activeTicker)
 
   // Obsługa crosshair – aktualizacja legendy
   chart.subscribeCrosshairMove((param) => {
@@ -433,6 +476,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onChartDeleteKey, true)
   resizeObs?.disconnect()
   lineTools = null
+  _earningsPlugin?.detach()
+  _earningsPlugin = null
   textWatermark?.detach()
   legend?.remove()
   drawingLines = []
@@ -449,23 +494,28 @@ watch(
 // ── Aktualizacja danych po zmianie candles ────────────────────
 watch(
   () => marketStore.candles,
-  () => {
+  (newCandles, oldCandles) => {
     if (!mainSeries) return
-    mainSeries.setData(marketStore.candles)
+    mainSeries.setData(newCandles)
     ma10Series.setData(marketStore.ma10)
     ma20Series.setData(marketStore.ma20)
     ma50Series.setData(marketStore.ma50)
     volSeries.setData(marketStore.volumeData)
 
+    // Świeże ładowanie (ticker zmieniony lub pierwsze ładowanie) — przewiń do najnowszych danych
+    if (oldCandles.length === 0 && newCandles.length > 0) {
+      chart.timeScale().scrollToRealTime()
+    }
+
     // Aktualizuj legendę z ostatnim słupkiem
-    if (marketStore.candles.length > 0) {
-      const lastCandle = marketStore.candles[marketStore.candles.length - 1]
+    if (newCandles.length > 0) {
+      const lastCandle = newCandles[newCandles.length - 1]
       legendInfo.open = lastCandle.open
       legendInfo.high = lastCandle.high
       legendInfo.low = lastCandle.low
       legendInfo.close = lastCandle.close
       legendInfo.volume = lastCandle.volume
-      legendInfo.adr20 = calculateADR20(marketStore.candles)
+      legendInfo.adr20 = calculateADR20(newCandles)
       updateLegend()
     }
   },
@@ -492,6 +542,11 @@ watch(
     applyLegendTheme()
     updateLegend()
     createWatermark()
+    if (_earningsPlugin && _earningsMarkers.length) {
+      const color = getTheme(theme).earningsMarkerColor ?? '#f59e0b'
+      _earningsMarkers = _earningsMarkers.map(m => ({ ...m, color }))
+      _earningsPlugin.setMarkers(_earningsMarkers)
+    }
   }
 )
 
@@ -501,6 +556,7 @@ watch(
   async (ticker) => {
     createWatermark()
     await loadCompanyInfo(ticker)
+    await loadEarningsMarkers(ticker)
     legendInfo.open = 0
     legendInfo.high = 0
     legendInfo.low = 0
@@ -515,11 +571,16 @@ watch(
 watch(
   () => appStore.screenshotTrigger,
   (val) => {
-    if (val > 0 && chart) {
-      const canvas = chart.takeScreenshot()
-      const url    = canvas.toDataURL('image/png')
-      const a      = document.createElement('a')
-      const date   = new Date().toISOString().slice(0, 10)
+    if (val < 1 || !chart) return
+    const canvas = chart.takeScreenshot()
+    if (appStore.screenshotMode === 'clipboard') {
+      canvas.toBlob(blob => {
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      }, 'image/png')
+    } else {
+      const url  = canvas.toDataURL('image/png')
+      const a    = document.createElement('a')
+      const date = new Date().toISOString().slice(0, 10)
       a.href     = url
       a.download = `${marketStore.activeTicker}_${date}.png`
       a.click()
@@ -545,6 +606,8 @@ watch(
     restoreLineToolsForTicker(newTicker)
   }
 )
+
+defineExpose({ getTimeScale: () => chart?.timeScale() ?? null })
 
 </script>
 

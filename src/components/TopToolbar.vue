@@ -3,7 +3,7 @@
     <!-- ── LEWA STRONA: ticker ── -->
     <div class="toolbar-left">
       <button class="ticker-btn" @click="isModalOpen = true" title="Zmień ticker">
-        <span class="ticker-label">{{ marketStore.activeTicker }}</span>
+        <span class="ticker-label">{{ panelStore.activeTicker }}</span>
         <span class="ticker-arrow">▾</span>
       </button>
       <!-- FLAG: kategoria koloru aktywnego tickera (hover = menu kolorów) -->
@@ -104,22 +104,52 @@
           <circle cx="12" cy="2" r="1.5" fill="currentColor"/>
         </svg>
       </button>
+      <button
+        class="toolbar-btn"
+        :class="{ 'toolbar-btn-active': panelStore.splitMode }"
+        title="Podziel widok"
+        @click="panelStore.toggleSplit()"
+      >
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="1" width="5" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+          <rect x="8" y="1" width="5" height="12" rx="1" stroke="currentColor" stroke-width="1.3"/>
+        </svg>
+      </button>
       <button class="toolbar-btn" @click="appStore.toggleTheme()" :title="themeLabel">
         <span>{{ appStore.theme === 'dark' ? '☀' : '🌙' }}</span>
       </button>
       <button class="toolbar-btn" @click="appStore.toggleFullscreen()" title="Pełny ekran">
         <span>{{ appStore.isFullscreen ? '⊡' : '⛶' }}</span>
       </button>
-      <button class="toolbar-btn" @click="appStore.requestScreenshot()" title="Screenshot (PNG)">
-        <span>⬡</span>
-      </button>
+      <div class="ss-wrapper">
+        <button
+          class="toolbar-btn"
+          :class="{ 'toolbar-btn-active': ssMenuOpen }"
+          title="Screenshot"
+          @click.stop="toggleSsMenu"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="1" y="3" width="12" height="9" rx="1.5" stroke="currentColor" stroke-width="1.3"/>
+            <circle cx="7" cy="7.5" r="2.2" stroke="currentColor" stroke-width="1.3"/>
+            <path d="M5 3V2.5C5 2 5.5 1.5 6 1.5h2c.5 0 1 .5 1 .5V3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <div v-if="ssMenuOpen" class="ss-menu" @click.stop>
+          <button class="ss-opt" @click="doScreenshot('file')">
+            <span class="ss-icon">💾</span> Zapisz do pliku
+          </button>
+          <button class="ss-opt" @click="doScreenshot('clipboard')">
+            <span class="ss-icon">📋</span> Kopiuj do schowka
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 
   <!-- Modal wyboru tickera (teleportowany do <body>) -->
   <TickerModal
     v-if="isModalOpen"
-    :current-ticker="marketStore.activeTicker"
+    :current-ticker="panelStore.activeTicker"
     @close="isModalOpen = false"
     @select="handleTickerSelect"
   />
@@ -129,11 +159,13 @@
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useAppStore }       from '@/stores/appStore.js'
 import { useMarketStore }    from '@/stores/marketStore.js'
+import { usePanelStore }     from '@/stores/panelStore.js'
 import { useWatchlistStore } from '@/stores/watchlistStore.js'
 import TickerModal           from '@/components/TickerModal.vue'
 
 const appStore       = useAppStore()
 const marketStore    = useMarketStore()
+const panelStore     = usePanelStore()
 const watchlistStore = useWatchlistStore()
 const isModalOpen    = ref(false)
 
@@ -159,7 +191,7 @@ const themeLabel = computed(() =>
 // ── Ticker modal ──────────────────────────────────────────────
 function handleTickerSelect(ticker) {
   isModalOpen.value = false
-  marketStore.setTicker(ticker)
+  panelStore.setActiveTicker(ticker)
 }
 
 // ── Flaga koloru ──────────────────────────────────────────────
@@ -210,6 +242,20 @@ async function handleAddToNamed(wid) {
   await watchlistStore.addToNamed(wid, marketStore.activeTicker)
   closePlusMenu()
 }
+// ── Screenshot menu ───────────────────────────────────────────
+const ssMenuOpen = ref(false)
+
+function toggleSsMenu() {
+  if (ssMenuOpen.value) { ssMenuOpen.value = false; return }
+  ssMenuOpen.value = true
+  nextTick(() => document.addEventListener('click', () => { ssMenuOpen.value = false }, { once: true }))
+}
+
+function doScreenshot(mode) {
+  ssMenuOpen.value = false
+  appStore.requestScreenshot(mode)
+}
+
 async function confirmCreate() {
   const name = newListName.value.trim()
   if (!name) return
@@ -434,4 +480,35 @@ async function confirmCreate() {
 .create-ok:disabled { opacity: 0.4; cursor: not-allowed; }
 .create-cancel { background: var(--bg-btn); color: var(--text-secondary); }
 .create-cancel:hover { background: var(--bg-btn-hover); }
+
+/* ── Screenshot menu ─────────────────────────────── */
+.ss-wrapper { position: relative; }
+.ss-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 170px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px var(--shadow-medium);
+  z-index: 200;
+  overflow: hidden;
+}
+.ss-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.ss-opt:hover { background: var(--bg-hover); }
+.ss-icon { font-size: 13px; }
 </style>

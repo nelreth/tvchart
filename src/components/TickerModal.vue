@@ -31,7 +31,7 @@
               v-if="isLoading"
               class="list-loading"
             >Pobieranie listy…</div>
-            <ul v-else class="ticker-list" ref="listRef">
+            <ul v-else class="ticker-list" ref="listRef" :style="{ '--ticker-item-color': appStore.themeColors.tickerItemColor }">
               <li
                 v-for="(item, idx) in filtered"
                 :key="item.ticker"
@@ -67,6 +67,9 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { fetchTickers } from '@/core/api.js'
+import { useAppStore } from '@/stores/appStore.js'
+
+const appStore = useAppStore()
 
 const props = defineProps({
   currentTicker: { type: String, default: '' },
@@ -250,7 +253,7 @@ function confirm() {
   font-size: 13px;
   font-weight: 600;
   min-width: 68px;
-  color: inherit;
+  color: var(--ticker-item-color, var(--text-primary));
 }
 .t-name {
   font-size: 11px;

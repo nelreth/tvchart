@@ -3,7 +3,7 @@
     <TopToolbar />
     <div class="app-body">
       <div class="chart-area">
-        <ChartView />
+        <ChartTabs />
       </div>
       <Transition name="slide-panel">
         <ContextPanel v-if="appStore.isContextPanelOpen" />
@@ -18,7 +18,7 @@
 import { watch } from 'vue'
 import { useAppStore } from '@/stores/appStore.js'
 import TopToolbar    from '@/components/TopToolbar.vue'
-import ChartView     from '@/components/ChartView.vue'
+import ChartTabs     from '@/components/ChartTabs.vue'
 import ContextPanel  from '@/components/ContextPanel.vue'
 import RightIconRail from '@/components/RightIconRail.vue'
 import ToastContainer from '@/components/ToastContainer.vue'

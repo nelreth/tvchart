@@ -31,7 +31,7 @@
               <span
                 class="wl-ticker"
                 :class="{ 'wl-ticker-active': item.ticker === marketStore.activeTicker }"
-                @click="marketStore.setTicker(item.ticker)"
+                @click="panelStore.setActiveTicker(item.ticker)"
               >{{ item.ticker }}</span>
               <button
                 class="wl-rm"
@@ -75,7 +75,7 @@
               <span
                 class="wl-ticker"
                 :class="{ 'wl-ticker-active': item.ticker === marketStore.activeTicker }"
-                @click="marketStore.setTicker(item.ticker)"
+                @click="panelStore.setActiveTicker(item.ticker)"
               >{{ item.ticker }}</span>
               <button
                 class="wl-rm"
@@ -96,9 +96,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { useWatchlistStore } from '@/stores/watchlistStore.js'
 import { useMarketStore }    from '@/stores/marketStore.js'
+import { usePanelStore }     from '@/stores/panelStore.js'
 
 const store       = useWatchlistStore()
 const marketStore = useMarketStore()
+const panelStore  = usePanelStore()
 
 const colorLists = computed(() => store.colorLists)
 const namedLists = computed(() => store.namedLists)

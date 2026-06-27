@@ -10,11 +10,12 @@ export const useAppStore = defineStore('app', () => {
   const drawingMode = ref(false)
 
   const screenshotTrigger = ref(0)
+  const screenshotMode = ref('file') // 'file' | 'clipboard'
   const lineToolTrigger = ref(0)
   const pendingLineToolType = ref(null)
 
   const activePanel = ref('watchlist')
-  const isContextPanelOpen = ref(true)
+  const isContextPanelOpen = ref(false)
 
   function setTheme(newTheme) {
     if (!['light', 'dark'].includes(newTheme)) return
@@ -45,7 +46,8 @@ export const useAppStore = defineStore('app', () => {
     drawingMode.value = !drawingMode.value
   }
 
-  function requestScreenshot() {
+  function requestScreenshot(mode = 'file') {
+    screenshotMode.value = mode
     screenshotTrigger.value += 1
   }
 
@@ -73,6 +75,7 @@ export const useAppStore = defineStore('app', () => {
     isFullscreen,
     drawingMode,
     screenshotTrigger,
+    screenshotMode,
     lineToolTrigger,
     pendingLineToolType,
     activePanel,

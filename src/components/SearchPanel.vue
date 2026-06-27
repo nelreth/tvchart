@@ -2,9 +2,28 @@
   <div class="search-panel">
     <!-- Kryteria wyszukiwania -->
     <div class="search-criteria">
+      <!-- Sector -->
+      <div class="criteria-row">
+        <label class="criteria-label">Sector</label>
+        <select v-model="selectedSector" class="criteria-select">
+          <option value="">— wszystkie —</option>
+          <option v-for="s in sectors" :key="s" :value="s">{{ s }}</option>
+        </select>
+      </div>
+
+      <!-- Industry -->
+      <div class="criteria-row">
+        <label class="criteria-label">Industry</label>
+        <select v-model="selectedIndustry" class="criteria-select" :disabled="!selectedSector">
+          <option value="">— wszystkie —</option>
+          <option v-for="i in industries" :key="i" :value="i">{{ i }}</option>
+        </select>
+      </div>
+
       <div class="criteria-row">
         <label class="criteria-label">Cena</label>
         <select v-model="operator" class="criteria-select">
+          <option value="none">— brak —</option>
           <option value="above">&gt; Above</option>
           <option value="below">&lt; Below</option>
           <option value="between">= Between</option>
@@ -12,7 +31,7 @@
       </div>
 
       <!-- Inputs dla above/below -->
-      <div v-if="operator !== 'between'" class="criteria-inputs">
+      <div v-if="operator !== 'between' && operator !== 'none'" class="criteria-inputs">
         <input
           v-model.number="priceValue"
           type="number"
@@ -22,7 +41,7 @@
       </div>
 
       <!-- Inputs dla between -->
-      <div v-else class="criteria-inputs between">
+      <div v-else-if="operator === 'between'" class="criteria-inputs between">
         <input
           v-model.number="priceFrom"
           type="number"
@@ -36,7 +55,51 @@
           class="input-price"
         />
       </div>
+
+      <!-- Volume (10d avg) -->
+      <div class="criteria-row">
+        <label class="criteria-label">Volume</label>
+        <select v-model="volOperator" class="criteria-select">
+          <option value="">— brak —</option>
+          <option value="above">&gt; Above</option>
+          <option value="between">= Between</option>
+        </select>
+      </div>
+
+      <div v-if="volOperator === 'above'" class="criteria-inputs">
+        <input
+          v-model.number="volValue"
+          type="number"
+          placeholder="10d avg vol"
+          class="input-price"
+        />
+      </div>
+
+      <div v-else-if="volOperator === 'between'" class="criteria-inputs between">
+        <input
+          v-model.number="volFrom"
+          type="number"
+          placeholder="Od"
+          class="input-price"
+        />
+        <input
+          v-model.number="volTo"
+          type="number"
+          placeholder="Do"
+          class="input-price"
+        />
+      </div>
+
+      <div v-if="volOperator" class="criteria-hint">
+        Avg volume z ostatnich 10 dni
+      </div>
     </div>
+
+    <!-- Opcje kolumn -->
+    <label class="col-toggle">
+      <input type="checkbox" v-model="showAvgVolume" />
+      Avg 10d
+    </label>
 
     <!-- Guzik Search -->
     <button
@@ -60,22 +123,24 @@
       <div class="results-header">{{ results.length }} wyników</div>
       <div class="results-table">
         <!-- Nagłówek -->
-        <div class="result-row result-header">
+        <div class="result-row result-header" :class="{ 'has-avg': showAvgVolume }">
           <span class="col-ticker">Ticker</span>
           <span class="col-price">Price</span>
           <span class="col-volume">Volume</span>
+          <span v-if="showAvgVolume" class="col-volume">Avg 10d</span>
         </div>
         <!-- Wiersze -->
         <div
           v-for="row in results"
           :key="row.ticker"
           class="result-row result-data"
-          :class="{ 'result-selected': row.ticker === selectedTicker }"
+          :class="{ 'result-selected': row.ticker === selectedTicker, 'has-avg': showAvgVolume }"
           @click="selectTicker(row.ticker)"
         >
           <span class="col-ticker">{{ row.ticker }}</span>
           <span class="col-price">{{ formatPrice(row.price) }}</span>
           <span class="col-volume">{{ formatVolume(row.volume) }}</span>
+          <span v-if="showAvgVolume" class="col-volume">{{ formatVolume(row.avg_volume) }}</span>
         </div>
       </div>
     </div>
@@ -88,15 +153,48 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useMarketStore } from '@/stores/marketStore.js'
+import { ref, computed, watch, onMounted } from 'vue'
+import { usePanelStore } from '@/stores/panelStore.js'
 
-const marketStore = useMarketStore()
+const panelStore = usePanelStore()
 
-const operator = ref('above')
+const sectors = ref([])
+const sectorIndustries = ref({})
+const selectedSector = ref('')
+const selectedIndustry = ref('')
+
+const industries = computed(() => {
+  if (!selectedSector.value) return []
+  return sectorIndustries.value[selectedSector.value] ?? []
+})
+
+watch(selectedSector, () => {
+  selectedIndustry.value = ''
+})
+
+onMounted(async () => {
+  try {
+    const res = await fetch('http://localhost:6070/sectors-industries')
+    if (res.ok) {
+      const data = await res.json()
+      sectors.value = data.sectors
+      sectorIndustries.value = data.sector_industries
+    }
+  } catch {}
+})
+
+const operator = ref('none')
 const priceValue = ref(null)
 const priceFrom = ref(null)
 const priceTo = ref(null)
+
+const volOperator = ref('')
+const volValue = ref(null)
+const volFrom = ref(null)
+const volTo = ref(null)
+
+const showAvgVolume = ref(false)
+
 const results = ref([])
 const isSearching = ref(false)
 const error = ref(null)
@@ -107,13 +205,23 @@ async function handleSearch() {
   error.value = null
   hasSearched.value = true
 
-  // Walidacja
-  if (operator.value !== 'between' && priceValue.value === null) {
+  // Walidacja ceny
+  if (operator.value !== 'between' && operator.value !== 'none' && priceValue.value === null) {
     error.value = 'Podaj cenę'
     return
   }
   if (operator.value === 'between' && (priceFrom.value === null || priceTo.value === null)) {
     error.value = 'Podaj zakres cen'
+    return
+  }
+
+  // Walidacja wolumenu
+  if (volOperator.value === 'above' && volValue.value === null) {
+    error.value = 'Podaj wartość wolumenu'
+    return
+  }
+  if (volOperator.value === 'between' && (volFrom.value === null || volTo.value === null)) {
+    error.value = 'Podaj zakres wolumenu'
     return
   }
 
@@ -124,9 +232,15 @@ async function handleSearch() {
       price: operator.value !== 'between' ? priceValue.value : null,
       price_from: operator.value === 'between' ? priceFrom.value : null,
       price_to: operator.value === 'between' ? priceTo.value : null,
+      vol_operator: volOperator.value || null,
+      vol_value: volOperator.value === 'above' ? volValue.value : null,
+      vol_from: volOperator.value === 'between' ? volFrom.value : null,
+      vol_to: volOperator.value === 'between' ? volTo.value : null,
+      sector: selectedSector.value || null,
+      industry: selectedIndustry.value || null,
     }
 
-    const response = await fetch('http://192.168.1.145:6070/search/by-price', {
+    const response = await fetch(`http://localhost:6070/search/by-price`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -145,7 +259,7 @@ async function handleSearch() {
 
 function selectTicker(ticker) {
   selectedTicker.value = ticker
-  marketStore.setTicker(ticker)
+  panelStore.setActiveTicker(ticker)
 }
 
 function formatPrice(price) {
@@ -220,6 +334,21 @@ function formatVolume(volume) {
   width: 100%;
 }
 
+.col-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.col-toggle input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .search-btn {
   width: 100%;
   height: 32px;
@@ -279,9 +408,20 @@ function formatVolume(volume) {
   overflow: hidden;
 }
 
+.criteria-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding-left: 58px;
+  margin-top: -4px;
+}
+
 .result-row {
   display: grid;
   grid-template-columns: 60px 1fr 1fr;
+}
+
+.result-row.has-avg {
+  grid-template-columns: 60px 1fr 1fr 1fr;
   gap: 8px;
   padding: 8px 10px;
   font-size: 11px;

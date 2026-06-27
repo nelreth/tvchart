@@ -35,6 +35,49 @@ button:focus-visible {
 ─────────────────────────────────────────── */
 :root,
 :root[data-theme="dark"] {
+  --bg-primary:   'rgb(0,37,64)';
+  --bg-secondary: #002540;
+  --bg-elevated:  rgb(0,37,64);
+  --bg-panel:     #002540;
+  --bg-hover:     #2a2a4e;
+  --bg-btn:       #22223a;
+  --bg-btn-hover: #3a3a5e;
+
+  --text-primary:   #d1d4dc;
+  --text-secondary: #8b8b9e;
+  --text-muted:     #565670;
+
+  --border:       #2a2a4e;
+  --border-focus: rgb(40,100,140);
+
+  --accent:       rgb(40,100,140);
+  --accent-hover: #b09dff;
+
+  --text-on-accent: #ffffff;
+  --overlay-backdrop: rgba(0, 0, 0, 0.6);
+  --shadow-soft: rgba(0, 0, 0, 0.35);
+  --shadow-medium: rgba(0, 0, 0, 0.4);
+  --shadow-strong: rgba(0, 0, 0, 0.5);
+  --focus-ring-soft: rgba(79, 195, 247, 0.15);
+
+  --status-error: #ef5350;
+  --status-error-bg: rgba(239, 83, 80, 0.15);
+  --status-success: #26a69a;
+  --status-success-bg: #1a3a2a;
+  --status-warning: #f1c40f;
+  --status-warning-bg: #2a2a1a;
+  --status-failed-bg: #3a1a1a;
+
+  --up-color:   #26a69a;
+  --down-color: #ef5350;
+
+  --chart-bg:          #1a1a2e;
+  --chart-text:        #d1d4dc;
+  --chart-grid:        #2a2a4e;
+  --chart-border:      #2a2a4e;
+  --chart-crosshair:   #9B7DFF;
+}
+/* :root[data-theme="dark"] {
   --bg-primary:   #1a1a2e;
   --bg-secondary: #16213e;
   --bg-elevated:  #1e2a45;
@@ -71,13 +114,12 @@ button:focus-visible {
   --up-color:   #26a69a;
   --down-color: #ef5350;
 
-  /* Lightweight Charts */
   --chart-bg:          #1a1a2e;
   --chart-text:        #d1d4dc;
   --chart-grid:        #2a2a4e;
   --chart-border:      #2a2a4e;
   --chart-crosshair:   #9B7DFF;
-}
+} */
 
 /* ───────────────────────────────────────────
    THEME: LIGHT
